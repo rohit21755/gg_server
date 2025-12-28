@@ -108,3 +108,57 @@ func DeleteSessionByToken(db *gorm.DB, token string) error {
 func DeleteExpiredSessions(db *gorm.DB) error {
 	return db.Where("expires_at < ?", time.Now()).Delete(&UserSession{}).Error
 }
+
+func GetUserByReferralCode(db *gorm.DB, referralCode string) (*User, error) {
+	var u User
+	if err := db.Where("referral_code = ?", referralCode).First(&u).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+func GetUserStreak(db *gorm.DB, userID uint, streakType string) (*UserStreak, error) {
+	var streak UserStreak
+	userIDInt := int(userID)
+	if err := db.Where("user_id = ? AND streak_type = ?", userIDInt, streakType).First(&streak).Error; err != nil {
+		return nil, err
+	}
+	return &streak, nil
+}
+
+func UpdateUserStreak(db *gorm.DB, streak *UserStreak) error {
+	if streak.ID == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	result := db.Save(streak)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+func GetUserWithRelations(db *gorm.DB, userID uint) (*User, error) {
+	var user User
+	if err := db.Preload("College").Preload("State").First(&user, userID).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func GetUserBadgeCount(db *gorm.DB, userID uint) (int, error) {
+	var count int64
+	if err := db.Model(&UserBadge{}).Where("user_id = ?", userID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+func GetUserCertificates(db *gorm.DB, userID uint) ([]Certificate, error) {
+	var certificates []Certificate
+	if err := db.Where("user_id = ?", userID).Find(&certificates).Error; err != nil {
+		return nil, err
+	}
+	return certificates, nil
+}
