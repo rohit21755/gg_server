@@ -5,7 +5,6 @@ CREATE TABLE states (
     code VARCHAR(10) UNIQUE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 -- Colleges Table
 CREATE TABLE colleges (
     id SERIAL PRIMARY KEY,
