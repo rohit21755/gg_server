@@ -132,20 +132,20 @@ func setupREST(r chi.Router, db *gorm.DB) {
 			})
 
 			// Rewards routes
-			// r.Route("/rewards", func(r chi.Router) {
-			// 	r.Get("/", getRewardsHandler(db))
-			// 	r.Get("/{id}", getRewardHandler(db))
-			// 	r.Post("/{id}/redeem", redeemRewardHandler(db))
-			// 	r.Get("/redemptions", getRewardRedemptionsHandler(db))
-			// })
+			r.Route("/rewards", func(r chi.Router) {
+				r.Get("/", getRewardsHandler(db))
+				r.Get("/{id}", getRewardHandler(db))
+				r.Post("/{id}/redeem", redeemRewardHandler(db))
+				r.Get("/redemptions", getRewardRedemptionsHandler(db))
+			})
 
 			// Referral routes
-			// r.Route("/referrals", func(r chi.Router) {
-			// 	r.Get("/", getReferralsHandler(db))
-			// 	r.Get("/code", getReferralCodeHandler(db))
-			// 	r.Get("/invites", getReferralInvitesHandler(db))
-			// 	r.Post("/invite", sendReferralInviteHandler(db))
-			// })
+			r.Route("/referrals", func(r chi.Router) {
+				r.Get("/", getReferralsHandler(db))
+				r.Get("/code", getReferralCodeHandler(db))
+				r.Get("/invites", getReferralInvitesHandler(db))
+				r.Post("/invite", sendReferralInviteHandler(db))
+			})
 
 			// College & State routes
 			// r.Route("/colleges", func(r chi.Router) {
@@ -161,29 +161,29 @@ func setupREST(r chi.Router, db *gorm.DB) {
 			// })
 
 			// Campus Wars routes
-			// r.Route("/wars", func(r chi.Router) {
-			// 	r.Get("/active", getActiveWarsHandler(db))
-			// 	r.Get("/{id}", getWarHandler(db))
-			// 	r.Get("/{id}/participants", getWarParticipantsHandler(db))
-			// 	r.Get("/{id}/leaderboard", getWarLeaderboardHandler(db))
-			// })
+			r.Route("/wars", func(r chi.Router) {
+				r.Get("/active", getActiveWarsHandler(db))
+				r.Get("/{id}", getWarHandler(db))
+				r.Get("/{id}/participants", getWarParticipantsHandler(db))
+				r.Get("/{id}/leaderboard", getWarLeaderboardHandler(db))
+			})
 
 			// Survey routes
-			// r.Route("/surveys", func(r chi.Router) {
-			// 	r.Get("/available", getAvailableSurveysHandler(db))
-			// 	r.Get("/{id}", getSurveyHandler(db))
-			// 	r.Post("/{id}/submit", submitSurveyHandler(db))
-			// 	r.Get("/responses", getSurveyResponsesHandler(db))
-			// })
+			r.Route("/surveys", func(r chi.Router) {
+				r.Get("/available", getAvailableSurveysHandler(db))
+				r.Get("/{id}", getSurveyHandler(db))
+				r.Post("/{id}/submit", submitSurveyHandler(db))
+				r.Get("/responses", getSurveyResponsesHandler(db))
+			})
 
 			// Notification routes
-			// r.Route("/notifications", func(r chi.Router) {
-			// 	r.Get("/", getNotificationsHandler(db))
-			// 	r.Get("/unread-count", getUnreadNotificationsCountHandler(db))
-			// 	r.Put("/{id}/read", markNotificationReadHandler(db))
-			// 	r.Put("/read-all", markAllNotificationsReadHandler(db))
-			// 	r.Delete("/{id}", deleteNotificationHandler(db))
-			// })
+			r.Route("/notifications", func(r chi.Router) {
+				r.Get("/", getNotificationsHandler(db))
+				r.Get("/unread-count", getUnreadNotificationsCountHandler(db))
+				r.Put("/{id}/read", markNotificationReadHandler(db))
+				r.Put("/read-all", markAllNotificationsReadHandler(db))
+				r.Delete("/{id}", deleteNotificationHandler(db))
+			})
 		})
 	})
 }
