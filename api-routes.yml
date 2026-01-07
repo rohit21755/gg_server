@@ -1,0 +1,1685 @@
+openapi: 3.0.0
+info:
+  title: Campus Ambassador API
+  version: 1.0.0
+  description: REST API documentation for Campus Ambassador Platform
+
+servers:
+  - url: http://localhost:{PORT}/api/v1
+    description: Local development server
+    variables:
+      PORT:
+        default: "8080"
+
+paths:
+  # Health Check
+  /health:
+    get:
+      summary: Health check endpoint
+      tags: [System]
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            text/plain:
+              example: "OK"
+
+  # Authentication Routes
+  /auth/login:
+    post:
+      summary: User login
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  minLength: 6
+                  example: "password123"
+      responses:
+        '200':
+          description: Login successful
+        '401':
+          description: Invalid credentials
+
+  /auth/register:
+    post:
+      summary: User registration
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, first_name, last_name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 6
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                phone:
+                  type: string
+                college_id:
+                  type: integer
+                referral_id:
+                  type: string
+      responses:
+        '201':
+          description: Registration successful
+        '400':
+          description: Invalid request
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+
+  /auth/logout:
+    post:
+      summary: User logout
+      tags: [Authentication]
+      headers:
+        Authorization:
+          required: true
+          schema:
+            type: string
+            example: "Bearer {token}"
+      responses:
+        '200':
+          description: Logout successful
+
+  /auth/forgot-password:
+    post:
+      summary: Request password reset
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Reset email sent
+
+  /auth/reset-password:
+    post:
+      summary: Reset password
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+                  minLength: 6
+      responses:
+        '200':
+          description: Password reset successful
+
+  /auth/verify-email/{token}:
+    get:
+      summary: Verify email address
+      tags: [Authentication]
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email verified
+
+  # Public Routes
+  /colleges:
+    get:
+      summary: Get all colleges
+      tags: [Public]
+      responses:
+        '200':
+          description: List of colleges
+
+  /states:
+    get:
+      summary: Get all states
+      tags: [Public]
+      responses:
+        '200':
+          description: List of states
+
+  /leaderboards/global:
+    get:
+      summary: Get global leaderboard
+      tags: [Public]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: Global leaderboard
+
+  # Protected User Routes
+  /users/me:
+    get:
+      summary: Get current user profile
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile
+        '401':
+          description: Unauthorized
+
+    put:
+      summary: Update user profile
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                phone:
+                  type: string
+                college_id:
+                  type: integer
+                state_id:
+                  type: integer
+      responses:
+        '200':
+          description: Profile updated
+
+  /users/me/avatar:
+    patch:
+      summary: Update user avatar
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                avatar_url:
+                  type: string
+      responses:
+        '200':
+          description: Avatar updated
+
+  /users/me/resume:
+    post:
+      summary: Upload user resume
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                resume:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Resume uploaded
+
+  /users/me/certificates:
+    get:
+      summary: Get user certificates
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of certificates
+
+  /users/me/certificates/{id}/download:
+    get:
+      summary: Download certificate
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Certificate file
+
+  /users/me/stats:
+    get:
+      summary: Get user dashboard stats
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User statistics
+
+  /users/me/activity:
+    get:
+      summary: Get user activity feed
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: Activity feed
+
+  /users/search:
+    get:
+      summary: Search users
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Search query (name/email)
+      responses:
+        '200':
+          description: Search results
+
+  /users/{id}/stats:
+    get:
+      summary: Get user statistics
+      tags: [Users]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User statistics
+
+  # Task Routes
+  /tasks:
+    get:
+      summary: Get all tasks
+      tags: [Tasks]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of tasks
+
+  /tasks/{id}:
+    get:
+      summary: Get task by ID
+      tags: [Tasks]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Task details
+
+  /tasks/assigned:
+    get:
+      summary: Get assigned tasks
+      tags: [Tasks]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Assigned tasks
+
+  /tasks/available:
+    get:
+      summary: Get available tasks
+      tags: [Tasks]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Available tasks
+
+  # Submission Routes
+  /submissions:
+    get:
+      summary: Get user submissions
+      tags: [Submissions]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of submissions
+
+    post:
+      summary: Create submission
+      tags: [Submissions]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [task_id, proof_type, proof_url]
+              properties:
+                task_id:
+                  type: integer
+                proof_type:
+                  type: string
+                proof_url:
+                  type: string
+                  format: uri
+                proof_text:
+                  type: string
+      responses:
+        '201':
+          description: Submission created
+
+  /submissions/{id}:
+    get:
+      summary: Get submission by ID
+      tags: [Submissions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Submission details
+
+    put:
+      summary: Update submission
+      tags: [Submissions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                proof_url:
+                  type: string
+                proof_text:
+                  type: string
+      responses:
+        '200':
+          description: Submission updated
+
+    delete:
+      summary: Delete submission
+      tags: [Submissions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Submission deleted
+
+  /submissions/{id}/proof:
+    get:
+      summary: Get submission proof
+      tags: [Submissions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Proof data
+
+  /submissions/{id}/appeal:
+    post:
+      summary: Appeal rejected submission
+      tags: [Submissions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Appeal submitted
+
+  # Campaign Routes
+  /campaigns:
+    get:
+      summary: Get all campaigns
+      tags: [Campaigns]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of campaigns
+
+  /campaigns/{id}:
+    get:
+      summary: Get campaign by ID
+      tags: [Campaigns]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campaign details
+
+  /campaigns/{id}/join:
+    post:
+      summary: Join campaign
+      tags: [Campaigns]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Joined campaign
+
+  /campaigns/{id}/tasks:
+    get:
+      summary: Get campaign tasks
+      tags: [Campaigns]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campaign tasks
+
+  /campaigns/{id}/leaderboard:
+    get:
+      summary: Get campaign leaderboard
+      tags: [Campaigns]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campaign leaderboard
+
+  # Gamification Routes
+  /xp/transactions:
+    get:
+      summary: Get XP transactions
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: XP transaction history
+
+  /xp/award:
+    post:
+      summary: Award XP (internal)
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                description:
+                  type: string
+      responses:
+        '200':
+          description: XP awarded
+
+  /levels:
+    get:
+      summary: Get all levels
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of levels
+
+  /levels/current:
+    get:
+      summary: Get current user level
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current level
+
+  /levels/{id}/next:
+    get:
+      summary: Get next level info
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Next level information
+
+  /badges:
+    get:
+      summary: Get all badges
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of badges
+
+  /badges/{id}:
+    get:
+      summary: Get badge by ID
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Badge details
+
+  /badges/me:
+    get:
+      summary: Get user badges
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User badges
+
+  /streaks:
+    get:
+      summary: Get user streaks
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User streaks
+
+    post:
+      summary: Log streak activity
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                streak_type:
+                  type: string
+      responses:
+        '200':
+          description: Streak logged
+
+  /spin-wheel:
+    get:
+      summary: Get spin wheel
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Spin wheel data
+
+    post:
+      summary: Spin the wheel
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Spin result
+
+  /spin-wheel/history:
+    get:
+      summary: Get spin history
+      tags: [Gamification]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Spin history
+
+  # Engagement Routes
+  /flash-challenges/active:
+    get:
+      summary: Get active flash challenges
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Active flash challenges
+
+  /flash-challenges/{id}/participate:
+    post:
+      summary: Participate in flash challenge
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Participation recorded
+
+  /trivia/active:
+    get:
+      summary: Get active trivia
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Active trivia
+
+  /trivia/{id}/start:
+    post:
+      summary: Start trivia
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Trivia started
+
+  /trivia/{id}/submit-answers:
+    post:
+      summary: Submit trivia answers
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Answers submitted
+
+  /mystery-boxes:
+    get:
+      summary: Get mystery boxes
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Mystery boxes
+
+  /mystery-boxes/{id}/open:
+    post:
+      summary: Open mystery box
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Mystery box opened
+
+  /secret-codes/redeem/{code}:
+    post:
+      summary: Redeem secret code
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Code redeemed
+
+  /weekly-challenge/current:
+    get:
+      summary: Get current weekly challenge
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current weekly challenge
+
+  /weekly-challenge/submit:
+    post:
+      summary: Submit weekly challenge
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                submission:
+                  type: string
+      responses:
+        '200':
+          description: Submission created
+
+  /weekly-challenge/submissions:
+    get:
+      summary: Get weekly challenge submissions
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Submissions list
+
+  /weekly-challenge/vote/{submissionId}:
+    post:
+      summary: Vote for weekly challenge submission
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vote recorded
+
+  /battles/active:
+    get:
+      summary: Get active battles
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Active battles
+
+  /battles/{id}/submit:
+    post:
+      summary: Submit battle entry
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                submission:
+                  type: string
+      responses:
+        '200':
+          description: Submission created
+
+  /battles/{id}/vote/{submissionId}:
+    post:
+      summary: Vote for battle submission
+      tags: [Engagement]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vote recorded
+
+  # Rewards Routes
+  /rewards:
+    get:
+      summary: Get all rewards
+      tags: [Rewards]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of rewards
+
+  /rewards/{id}:
+    get:
+      summary: Get reward by ID
+      tags: [Rewards]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reward details
+
+  /rewards/{id}/redeem:
+    post:
+      summary: Redeem reward
+      tags: [Rewards]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reward redeemed
+
+  /rewards/redemptions:
+    get:
+      summary: Get user reward redemptions
+      tags: [Rewards]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Redemption history
+
+  # Referral Routes
+  /referrals:
+    get:
+      summary: Get user referrals
+      tags: [Referrals]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Referral data
+
+  /referrals/code:
+    get:
+      summary: Get user referral code
+      tags: [Referrals]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Referral code
+
+  /referrals/invites:
+    get:
+      summary: Get referral invites
+      tags: [Referrals]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Invite list
+
+  /referrals/invite:
+    post:
+      summary: Send referral invite
+      tags: [Referrals]
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Invite sent
+
+  # College & State Routes
+  /colleges/{id}:
+    get:
+      summary: Get college by ID
+      tags: [Colleges]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: College details
+
+  /colleges/{id}/leaderboard:
+    get:
+      summary: Get college leaderboard
+      tags: [Colleges]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: College leaderboard
+
+  /states/{id}:
+    get:
+      summary: Get state by ID
+      tags: [States]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: State details
+
+  /states/{id}/leaderboard:
+    get:
+      summary: Get state leaderboard
+      tags: [States]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: State leaderboard
+
+  # Campus Wars Routes
+  /wars/active:
+    get:
+      summary: Get active campus wars
+      tags: [Campus Wars]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Active wars
+
+  /wars/{id}:
+    get:
+      summary: Get war by ID
+      tags: [Campus Wars]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: War details
+
+  /wars/{id}/participants:
+    get:
+      summary: Get war participants
+      tags: [Campus Wars]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Participants list
+
+  /wars/{id}/leaderboard:
+    get:
+      summary: Get war leaderboard
+      tags: [Campus Wars]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: War leaderboard
+
+  # Survey Routes
+  /surveys/available:
+    get:
+      summary: Get available surveys
+      tags: [Surveys]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Available surveys
+
+  /surveys/{id}:
+    get:
+      summary: Get survey by ID
+      tags: [Surveys]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Survey details
+
+  /surveys/{id}/submit:
+    post:
+      summary: Submit survey
+      tags: [Surveys]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                responses:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Survey submitted
+
+  /surveys/responses:
+    get:
+      summary: Get user survey responses
+      tags: [Surveys]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Survey responses
+
+  # Notification Routes
+  /notifications:
+    get:
+      summary: Get user notifications
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Notifications list
+
+  /notifications/unread-count:
+    get:
+      summary: Get unread notification count
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Unread count
+
+  /notifications/{id}/read:
+    put:
+      summary: Mark notification as read
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Notification marked as read
+
+  /notifications/read-all:
+    put:
+      summary: Mark all notifications as read
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: All notifications marked as read
+
+  /notifications/{id}:
+    delete:
+      summary: Delete notification
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Notification deleted
+
+  # Wallet Routes
+  /wallet:
+    get:
+      summary: Get user wallet
+      tags: [Wallet]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Wallet balance
+
+  /wallet/transactions:
+    get:
+      summary: Get wallet transactions
+      tags: [Wallet]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: Transaction history
+
+  /wallet/transfer:
+    post:
+      summary: Transfer wallet funds
+      tags: [Wallet]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to_user_id, amount, currency]
+              properties:
+                to_user_id:
+                  type: integer
+                amount:
+                  type: number
+                  format: float
+                  minimum: 0.01
+                currency:
+                  type: string
+                  enum: [coins, cash]
+      responses:
+        '200':
+          description: Transfer completed
+
+  # Social & Feed Routes
+  /feed:
+    get:
+      summary: Get activity feed
+      tags: [Social]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Activity feed
+
+  /posts:
+    post:
+      summary: Create social post
+      tags: [Social]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                media_urls:
+                  type: string
+                post_type:
+                  type: string
+                is_public:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: Post created
+
+  /posts/{id}/like:
+    post:
+      summary: Like a post
+      tags: [Social]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Post liked
+
+  /posts/{id}/unlike:
+    post:
+      summary: Unlike a post
+      tags: [Social]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Post unliked
+
+  /posts/{id}/comment:
+    post:
+      summary: Comment on a post
+      tags: [Social]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+      responses:
+        '201':
+          description: Comment created
+
+  /posts/{id}/comments:
+    get:
+      summary: Get post comments
+      tags: [Social]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: Comments list
+
+  # Activity Routes
+  /activities:
+    get:
+      summary: Get user activities
+      tags: [Activities]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: User activities
+
+  /activities/global:
+    get:
+      summary: Get global activity feed
+      tags: [Activities]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: Global activities
+
+  # Dashboard Routes
+  /dashboard:
+    get:
+      summary: Get user dashboard
+      tags: [Dashboard]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Dashboard data
+
+  /dashboard/quick-stats:
+    get:
+      summary: Get quick stats
+      tags: [Dashboard]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Quick statistics
+
+  # Email Preferences
+  /email/preferences:
+    get:
+      summary: Get email preferences
+      tags: [Email]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Email preferences
+
+    put:
+      summary: Update email preferences
+      tags: [Email]
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                marketing_emails:
+                  type: boolean
+                task_notifications:
+                  type: boolean
+                achievement_emails:
+                  type: boolean
+                weekly_digest:
+                  type: boolean
+      responses:
+        '200':
+          description: Preferences updated
+
+  /email/verify/resend:
+    post:
+      summary: Resend verification email
+      tags: [Email]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Verification email sent
+
+# Security Schemes
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from /auth/login endpoint.
+        Include in Authorization header as: "Bearer {token}"
+
+# Common Headers
+# All protected routes require:
+#   Authorization: Bearer {access_token}
+#   Content-Type: application/json (for POST/PUT/PATCH requests)
+

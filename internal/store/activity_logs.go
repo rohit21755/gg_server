@@ -34,3 +34,27 @@ func GetActivityLogByID(db *gorm.DB, id uint) (*ActivityLog, error) {
 	}
 	return &log, nil
 }
+
+func GetUserActivityLogs(db *gorm.DB, userID uint, limit int) ([]ActivityLog, error) {
+	var logs []ActivityLog
+	query := db.Where("user_id = ?", userID).Order("created_at DESC")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if err := query.Find(&logs).Error; err != nil {
+		return nil, err
+	}
+	return logs, nil
+}
+
+func GetGlobalActivityLogs(db *gorm.DB, limit int) ([]ActivityLog, error) {
+	var logs []ActivityLog
+	query := db.Order("created_at DESC")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if err := query.Find(&logs).Error; err != nil {
+		return nil, err
+	}
+	return logs, nil
+}

@@ -28,6 +28,11 @@ func setupREST(r chi.Router, db *gorm.DB) {
 			r.Get("/verify-email/{token}", verifyEmailHandler(db))
 		})
 
+		// Public routes
+		r.Get("/colleges", getCollegesHandler(db))
+		r.Get("/states", getStatesHandler(db))
+		r.Get("/leaderboards/global", getGlobalLeaderboardHandler(db))
+
 		// Protected routes
 		r.Group(func(r chi.Router) {
 			r.Use(RequireAuth(db))
@@ -40,6 +45,10 @@ func setupREST(r chi.Router, db *gorm.DB) {
 				r.Post("/me/resume", uploadResumeHandler(db))
 				r.Get("/me/certificates", getUserCertificatesHandler(db))
 				r.Get("/me/certificates/{id}/download", downloadCertificateHandler(db))
+				r.Get("/me/stats", getUserDashboardStatsHandler(db))
+				r.Get("/me/activity", getUserActivityHandler(db))
+				r.Get("/search", searchUsersHandler(db))
+				r.Get("/{id}/stats", getUserStatsHandler(db))
 			})
 
 			// Task routes
@@ -58,6 +67,10 @@ func setupREST(r chi.Router, db *gorm.DB) {
 				r.Put("/{id}", updateSubmissionHandler(db))
 				r.Delete("/{id}", deleteSubmissionHandler(db))
 				r.Get("/{id}/proof", getSubmissionProofHandler(db))
+				r.Post("/{id}/appeal", func(w http.ResponseWriter, r *http.Request) {
+					// TODO: Implement appeal handler
+					writeJSONError(w, http.StatusNotImplemented, "appeal not yet implemented")
+				})
 			})
 
 			// Campaign routes
@@ -78,6 +91,10 @@ func setupREST(r chi.Router, db *gorm.DB) {
 			r.Route("/levels", func(r chi.Router) {
 				r.Get("/", getLevelsHandler(db))
 				r.Get("/current", getCurrentLevelHandler(db))
+				r.Get("/{id}/next", func(w http.ResponseWriter, r *http.Request) {
+					// TODO: Implement next level handler
+					writeJSONError(w, http.StatusNotImplemented, "next level not yet implemented")
+				})
 			})
 
 			r.Route("/badges", func(r chi.Router) {
@@ -148,17 +165,15 @@ func setupREST(r chi.Router, db *gorm.DB) {
 			})
 
 			// College & State routes
-			// r.Route("/colleges", func(r chi.Router) {
-			// 	r.Get("/", getCollegesHandler(db))
-			// 	r.Get("/{id}", getCollegeHandler(db))
-			// 	r.Get("/{id}/stats", getCollegeStatsHandler(db))
-			// })
+			r.Route("/colleges", func(r chi.Router) {
+				r.Get("/{id}", getCollegeHandler(db))
+				r.Get("/{id}/leaderboard", getCollegeLeaderboardHandler(db))
+			})
 
-			// r.Route("/states", func(r chi.Router) {
-			// 	r.Get("/", getStatesHandler(db))
-			// 	r.Get("/{id}", getStateHandler(db))
-			// 	r.Get("/{id}/leaderboard", getStateLeaderboardHandler(db))
-			// })
+			r.Route("/states", func(r chi.Router) {
+				r.Get("/{id}", getStateHandler(db))
+				r.Get("/{id}/leaderboard", getStateLeaderboardHandler(db))
+			})
 
 			// Campus Wars routes
 			r.Route("/wars", func(r chi.Router) {
@@ -183,6 +198,119 @@ func setupREST(r chi.Router, db *gorm.DB) {
 				r.Put("/{id}/read", markNotificationReadHandler(db))
 				r.Put("/read-all", markAllNotificationsReadHandler(db))
 				r.Delete("/{id}", deleteNotificationHandler(db))
+			})
+
+			// Wallet routes
+			r.Route("/wallet", func(r chi.Router) {
+				r.Get("/", getWalletHandler(db))
+				r.Get("/transactions", getWalletTransactionsHandler(db))
+				r.Post("/transfer", transferWalletHandler(db))
+			})
+
+			// Social & Feed routes
+			r.Route("/feed", func(r chi.Router) {
+				r.Get("/", getActivityFeedHandler(db))
+			})
+
+			r.Route("/posts", func(r chi.Router) {
+				r.Post("/", createPostHandler(db))
+				r.Post("/{id}/like", likePostHandler(db))
+				r.Post("/{id}/unlike", unlikePostHandler(db))
+				r.Post("/{id}/comment", commentPostHandler(db))
+				r.Get("/{id}/comments", getPostCommentsHandler(db))
+			})
+
+			// Activity routes
+			r.Route("/activities", func(r chi.Router) {
+				r.Get("/", getUserActivityHandler(db))
+				r.Get("/global", getGlobalActivityFeedHandler(db))
+			})
+
+			// Dashboard routes
+			r.Route("/dashboard", func(r chi.Router) {
+				r.Get("/", getUserDashboardStatsHandler(db))
+				r.Get("/quick-stats", getUserDashboardStatsHandler(db))
+			})
+
+			// Email preferences
+			r.Route("/email", func(r chi.Router) {
+				r.Get("/preferences", getEmailPreferencesHandler(db))
+				r.Put("/preferences", updateEmailPreferencesHandler(db))
+				r.Post("/verify/resend", resendVerificationEmailHandler(db))
+			})
+		})
+
+		// Admin routes
+		r.Route("/admin", func(r chi.Router) {
+			r.Use(RequireAuth(db))
+			r.Use(RequireAdmin(db))
+
+			// User management
+			r.Route("/users", func(r chi.Router) {
+				r.Get("/", adminGetUsersHandler(db))
+				r.Post("/", adminCreateUserHandler(db))
+				r.Get("/{id}", adminGetUserHandler(db))
+				r.Put("/{id}", adminUpdateUserHandler(db))
+				r.Delete("/{id}", adminDeleteUserHandler(db))
+				r.Post("/{id}/block", blockUserHandler(db))
+				r.Post("/{id}/reset-password", adminResetPasswordHandler(db))
+			})
+
+			// Task management
+			r.Route("/tasks", func(r chi.Router) {
+				r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+					writeJSONError(w, http.StatusNotImplemented, "create task not yet implemented")
+				})
+				r.Put("/{id}", func(w http.ResponseWriter, r *http.Request) {
+					writeJSONError(w, http.StatusNotImplemented, "update task not yet implemented")
+				})
+				r.Delete("/{id}", func(w http.ResponseWriter, r *http.Request) {
+					writeJSONError(w, http.StatusNotImplemented, "delete task not yet implemented")
+				})
+			})
+
+			// Campaign management
+			r.Route("/campaigns", func(r chi.Router) {
+				r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+					writeJSONError(w, http.StatusNotImplemented, "create campaign not yet implemented")
+				})
+				r.Put("/{id}", func(w http.ResponseWriter, r *http.Request) {
+					writeJSONError(w, http.StatusNotImplemented, "update campaign not yet implemented")
+				})
+				r.Delete("/{id}", func(w http.ResponseWriter, r *http.Request) {
+					writeJSONError(w, http.StatusNotImplemented, "delete campaign not yet implemented")
+				})
+			})
+
+			// Submission review
+			r.Route("/submissions", func(r chi.Router) {
+				r.Get("/pending", adminGetPendingSubmissionsHandler(db))
+				r.Get("/stats", adminGetSubmissionStatsHandler(db))
+				r.Post("/{id}/review", adminReviewSubmissionHandler(db))
+			})
+
+			// Gamification management
+			r.Route("/xp", func(r chi.Router) {
+				r.Post("/award", adminAwardXPHandler(db))
+				r.Post("/penalize", adminPenalizeXPHandler(db))
+			})
+
+			r.Route("/badges", func(r chi.Router) {
+				r.Post("/award", adminAwardBadgeHandler(db))
+			})
+
+			// Dashboard & Analytics
+			r.Route("/dashboard", func(r chi.Router) {
+				r.Get("/", adminDashboardHandler(db))
+			})
+
+			r.Route("/analytics", func(r chi.Router) {
+				r.Get("/users", func(w http.ResponseWriter, r *http.Request) {
+					writeJSONError(w, http.StatusNotImplemented, "user analytics not yet implemented")
+				})
+				r.Get("/engagement", func(w http.ResponseWriter, r *http.Request) {
+					writeJSONError(w, http.StatusNotImplemented, "engagement analytics not yet implemented")
+				})
 			})
 		})
 	})

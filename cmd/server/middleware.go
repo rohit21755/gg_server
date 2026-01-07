@@ -77,3 +77,23 @@ func GetUserFromContext(r *http.Request) (*store.User, bool) {
 	user, ok := r.Context().Value(userContextKey).(*store.User)
 	return user, ok
 }
+
+// RequireAdmin is a middleware that requires the user to be an admin
+func RequireAdmin(db *gorm.DB) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, ok := GetUserFromContext(r)
+			if !ok {
+				writeJSONError(w, http.StatusUnauthorized, "authentication required")
+				return
+			}
+
+			if user.Role != "admin" && user.Role != "moderator" {
+				writeJSONError(w, http.StatusForbidden, "admin access required")
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
