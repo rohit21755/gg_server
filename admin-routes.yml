@@ -1,0 +1,732 @@
+openapi: 3.0.0
+info:
+  title: Campus Ambassador Admin API
+  version: 1.0.0
+  description: Admin-only REST API endpoints for Campus Ambassador Platform
+
+servers:
+  - url: http://localhost:{PORT}/api/v1/admin
+    description: Local development server
+    variables:
+      PORT:
+        default: "8080"
+
+paths:
+  # User Management
+  /users:
+    get:
+      summary: Get all users (paginated)
+      tags: [Admin - User Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+          description: Number of users per page
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: List of users with pagination info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Admin access required
+
+    post:
+      summary: Create new user
+      tags: [Admin - User Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, first_name, last_name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+                password:
+                  type: string
+                  minLength: 6
+                  example: "password123"
+                first_name:
+                  type: string
+                  example: "John"
+                last_name:
+                  type: string
+                  example: "Doe"
+                role:
+                  type: string
+                  enum: [ca, admin, moderator]
+                  default: "ca"
+                college_id:
+                  type: integer
+                  nullable: true
+                state_id:
+                  type: integer
+                  nullable: true
+      responses:
+        '201':
+          description: User created successfully
+        '400':
+          description: Invalid request
+        '403':
+          description: Forbidden - Admin access required
+
+  /users/{id}:
+    get:
+      summary: Get user by ID
+      tags: [Admin - User Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      responses:
+        '200':
+          description: User details
+        '404':
+          description: User not found
+        '403':
+          description: Forbidden - Admin access required
+
+    put:
+      summary: Update user
+      tags: [Admin - User Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                role:
+                  type: string
+                  enum: [ca, admin, moderator]
+                college_id:
+                  type: integer
+                  nullable: true
+                state_id:
+                  type: integer
+                  nullable: true
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: User updated successfully
+        '404':
+          description: User not found
+        '403':
+          description: Forbidden - Admin access required
+
+    delete:
+      summary: Delete user
+      tags: [Admin - User Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User deleted successfully
+        '404':
+          description: User not found
+        '403':
+          description: Forbidden - Admin access required
+
+  /users/{id}/block:
+    post:
+      summary: Block or unblock user
+      tags: [Admin - User Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [blocked]
+              properties:
+                blocked:
+                  type: boolean
+                  description: true to block, false to unblock
+      responses:
+        '200':
+          description: User status updated
+        '404':
+          description: User not found
+        '403':
+          description: Forbidden - Admin access required
+
+  /users/{id}/reset-password:
+    post:
+      summary: Reset user password (admin)
+      tags: [Admin - User Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new_password]
+              properties:
+                new_password:
+                  type: string
+                  minLength: 6
+                  example: "newpassword123"
+      responses:
+        '200':
+          description: Password reset successfully
+        '404':
+          description: User not found
+        '403':
+          description: Forbidden - Admin access required
+
+  # Task Management
+  /tasks:
+    post:
+      summary: Create task (not yet implemented)
+      tags: [Admin - Task Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      responses:
+        '501':
+          description: Not implemented
+        '403':
+          description: Forbidden - Admin access required
+
+  /tasks/{id}:
+    put:
+      summary: Update task (not yet implemented)
+      tags: [Admin - Task Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '501':
+          description: Not implemented
+        '403':
+          description: Forbidden - Admin access required
+
+    delete:
+      summary: Delete task (not yet implemented)
+      tags: [Admin - Task Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '501':
+          description: Not implemented
+        '403':
+          description: Forbidden - Admin access required
+
+  # Campaign Management
+  /campaigns:
+    post:
+      summary: Create campaign (not yet implemented)
+      tags: [Admin - Campaign Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      responses:
+        '501':
+          description: Not implemented
+        '403':
+          description: Forbidden - Admin access required
+
+  /campaigns/{id}:
+    put:
+      summary: Update campaign (not yet implemented)
+      tags: [Admin - Campaign Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '501':
+          description: Not implemented
+        '403':
+          description: Forbidden - Admin access required
+
+    delete:
+      summary: Delete campaign (not yet implemented)
+      tags: [Admin - Campaign Management]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '501':
+          description: Not implemented
+        '403':
+          description: Forbidden - Admin access required
+
+  # Submission Review
+  /submissions/pending:
+    get:
+      summary: Get all pending submissions
+      tags: [Admin - Submission Review]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      responses:
+        '200':
+          description: List of pending submissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  submissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Submission'
+        '403':
+          description: Forbidden - Admin access required
+
+  /submissions/stats:
+    get:
+      summary: Get submission statistics
+      tags: [Admin - Submission Review]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      responses:
+        '200':
+          description: Submission statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pending:
+                    type: integer
+                  approved:
+                    type: integer
+                  rejected:
+                    type: integer
+                  total:
+                    type: integer
+        '403':
+          description: Forbidden - Admin access required
+
+  /submissions/{id}/review:
+    post:
+      summary: Review submission (approve/reject)
+      tags: [Admin - Submission Review]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Submission ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [approved, rejected]
+                  description: Review status
+                comment:
+                  type: string
+                  description: Optional review comment
+      responses:
+        '200':
+          description: Submission reviewed successfully
+        '400':
+          description: Invalid status
+        '404':
+          description: Submission not found
+        '403':
+          description: Forbidden - Admin access required
+
+  # Gamification Management
+  /xp/award:
+    post:
+      summary: Award XP to user
+      tags: [Admin - Gamification]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, amount, description]
+              properties:
+                user_id:
+                  type: integer
+                  description: User ID to award XP to
+                amount:
+                  type: integer
+                  minimum: 1
+                  description: Amount of XP to award
+                description:
+                  type: string
+                  description: Reason for awarding XP
+      responses:
+        '200':
+          description: XP awarded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+        '403':
+          description: Forbidden - Admin access required
+
+  /xp/penalize:
+    post:
+      summary: Penalize user (deduct XP)
+      tags: [Admin - Gamification]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, amount, description]
+              properties:
+                user_id:
+                  type: integer
+                  description: User ID to penalize
+                amount:
+                  type: integer
+                  minimum: 1
+                  description: Amount of XP to deduct
+                description:
+                  type: string
+                  description: Reason for penalty
+      responses:
+        '200':
+          description: XP penalized successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+        '403':
+          description: Forbidden - Admin access required
+
+  /badges/award:
+    post:
+      summary: Award badge to user
+      tags: [Admin - Gamification]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, badge_id]
+              properties:
+                user_id:
+                  type: integer
+                  description: User ID to award badge to
+                badge_id:
+                  type: integer
+                  description: Badge ID to award
+      responses:
+        '200':
+          description: Badge awarded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  badge:
+                    $ref: '#/components/schemas/UserBadge'
+        '404':
+          description: User or badge not found
+        '403':
+          description: Forbidden - Admin access required
+
+  # Dashboard & Analytics
+  /dashboard:
+    get:
+      summary: Get admin dashboard overview
+      tags: [Admin - Dashboard]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_users:
+                    type: integer
+                  active_users:
+                    type: integer
+                  total_tasks:
+                    type: integer
+                  total_submissions:
+                    type: integer
+                  pending_submissions:
+                    type: integer
+        '403':
+          description: Forbidden - Admin access required
+
+  /analytics/users:
+    get:
+      summary: Get user analytics (not yet implemented)
+      tags: [Admin - Analytics]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      responses:
+        '501':
+          description: Not implemented
+        '403':
+          description: Forbidden - Admin access required
+
+  /analytics/engagement:
+    get:
+      summary: Get engagement analytics (not yet implemented)
+      tags: [Admin - Analytics]
+      security:
+        - BearerAuth: []
+        - AdminAuth: []
+      responses:
+        '501':
+          description: Not implemented
+        '403':
+          description: Forbidden - Admin access required
+
+# Security Schemes
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from /auth/login endpoint.
+        Include in Authorization header as: "Bearer {token}"
+    
+    AdminAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token for admin user (role must be 'admin' or 'moderator').
+        Include in Authorization header as: "Bearer {token}"
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        uuid:
+          type: string
+        email:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        role:
+          type: string
+        college_id:
+          type: integer
+          nullable: true
+        state_id:
+          type: integer
+          nullable: true
+        referral_code:
+          type: string
+        xp:
+          type: integer
+        level_id:
+          type: integer
+          nullable: true
+        streak_count:
+          type: integer
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Submission:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        task_id:
+          type: integer
+        status:
+          type: string
+          enum: [pending, approved, rejected, under_review]
+        proof_url:
+          type: string
+        proof_text:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserBadge:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        badge_id:
+          type: integer
+        earned_at:
+          type: string
+          format: date-time
+
+# Common Headers
+# All admin routes require:
+#   Authorization: Bearer {admin_access_token}
+#   Content-Type: application/json (for POST/PUT requests)
+#
+# Note: Admin routes require the user's role to be 'admin' or 'moderator'
+
