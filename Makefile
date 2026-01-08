@@ -11,7 +11,7 @@ migrate-up:
 	migrate -path migrations -database "postgres://postgres:postgres@localhost:5432/yourapp?sslmode=disable" up
 
 seed:
-	go run internal/db/seed.go
+	go run cmd/seed/main.go
 
 test:
 	go test -v ./tests/...
