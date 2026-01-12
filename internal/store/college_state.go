@@ -58,3 +58,16 @@ func GetCollegeByID(db *gorm.DB, id uint) (*College, error) {
 	}
 	return &college, nil
 }
+
+// GetCollegeByNameOrCode checks if a college exists by name or code
+func GetCollegeByNameOrCode(db *gorm.DB, name string, code *string) (*College, error) {
+	var college College
+	query := db.Where("name = ?", name)
+	if code != nil && *code != "" {
+		query = query.Or("code = ?", *code)
+	}
+	if err := query.First(&college).Error; err != nil {
+		return nil, err
+	}
+	return &college, nil
+}

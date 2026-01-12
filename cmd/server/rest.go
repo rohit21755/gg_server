@@ -35,6 +35,7 @@ func setupREST(r chi.Router, db *gorm.DB) {
 
 		// Public routes
 		r.Get("/colleges", getCollegesHandler(db))
+		r.Post("/colleges", createOrGetCollegeHandler(db))
 		r.Get("/states", getStatesHandler(db))
 		r.Get("/leaderboards/global", getGlobalLeaderboardHandler(db))
 

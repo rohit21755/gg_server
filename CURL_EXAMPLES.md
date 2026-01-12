@@ -61,6 +61,73 @@ curl -X GET http://localhost:8080/api/v1/users/me \
 curl http://localhost:8080/api/v1/colleges
 ```
 
+### Create or Get College (Public Endpoint - No Auth Required)
+```bash
+# Create a new college with name only
+curl -X POST http://localhost:8080/api/v1/colleges \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Massachusetts Institute of Technology"
+  }'
+```
+
+```bash
+# Create a new college with name and code
+curl -X POST http://localhost:8080/api/v1/colleges \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Stanford University",
+    "code": "STAN"
+  }'
+```
+
+```bash
+# Create a new college with name, code, and state_id
+curl -X POST http://localhost:8080/api/v1/colleges \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "University of California, Berkeley",
+    "code": "UCB",
+    "state_id": 1
+  }'
+```
+
+**Expected Response (New College Created):**
+```json
+{
+  "college": {
+    "id": 1,
+    "name": "Massachusetts Institute of Technology",
+    "code": null,
+    "state_id": null,
+    "total_cas": 0,
+    "total_xp": 0,
+    "is_active": true,
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  "message": "College created successfully"
+}
+```
+
+**Expected Response (College Already Exists):**
+```json
+{
+  "college": {
+    "id": 1,
+    "name": "Massachusetts Institute of Technology",
+    "code": null,
+    "state_id": null,
+    "total_cas": 0,
+    "total_xp": 0,
+    "is_active": true,
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  "message": "College already exists"
+}
+```
+
+**Note:** This endpoint is public and does not require authentication. If a college with the same name or code already exists, it will return the existing college instead of creating a duplicate.
+
 ### Get All States
 ```bash
 curl http://localhost:8080/api/v1/states
