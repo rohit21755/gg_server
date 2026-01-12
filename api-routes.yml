@@ -179,6 +179,69 @@ paths:
       responses:
         '200':
           description: List of colleges
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  colleges:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/College'
+
+    post:
+      summary: Create or get college (Public - No Auth Required)
+      description: Creates a new college if it doesn't exist, or returns existing college if found by name or code
+      tags: [Public]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 200
+                  example: "Massachusetts Institute of Technology"
+                code:
+                  type: string
+                  maxLength: 50
+                  example: "MIT"
+                state_id:
+                  type: integer
+                  example: 1
+      responses:
+        '201':
+          description: College created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  college:
+                    $ref: '#/components/schemas/College'
+                  message:
+                    type: string
+                    example: "College created successfully"
+        '200':
+          description: College already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  college:
+                    $ref: '#/components/schemas/College'
+                  message:
+                    type: string
+                    example: "College already exists"
+        '400':
+          description: Invalid request body
+        '409':
+          description: College with this code already exists
 
   /states:
     get:
@@ -733,13 +796,76 @@ paths:
 
   /streaks:
     get:
-      summary: Get user streaks
+      summary: Get user engagement streaks
+      description: Returns streak information based on all user engagement activities (submissions, tasks, spins, XP transactions). Includes calendar dates for calendar component display.
       tags: [Gamification]
       security:
         - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          description: Streak type (defaults to 'daily_engagement' which tracks all activities)
+          schema:
+            type: string
+            default: "daily_engagement"
+            enum: [daily_engagement, daily_login, weekly_task, campaign]
       responses:
         '200':
-          description: User streaks
+          description: User engagement streaks with calendar dates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      streak_type:
+                        type: string
+                        example: "daily_engagement"
+                      current_streak:
+                        type: integer
+                        description: Current consecutive days of engagement
+                        example: 5
+                      longest_streak:
+                        type: integer
+                        description: Longest consecutive days of engagement
+                        example: 10
+                      total_days:
+                        type: integer
+                        description: Total days with engagement activity
+                        example: 15
+                      last_activity:
+                        type: string
+                        format: date-time
+                        description: Date of last engagement activity
+                        example: "2024-01-15T00:00:00Z"
+                      calendar_dates:
+                        type: array
+                        description: Array of dates (YYYY-MM-DD format) for calendar component
+                        items:
+                          type: string
+                          format: date
+                        example: ["2024-01-15", "2024-01-14", "2024-01-13", "2024-01-12", "2024-01-11"]
+                      engagement_dates:
+                        type: array
+                        description: Full date objects of all engagement activities
+                        items:
+                          type: string
+                          format: date-time
+                      recent_logs:
+                        type: array
+                        description: Recent streak log entries
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            activity_date:
+                              type: string
+                              format: date
+                            earned_xp:
+                              type: integer
 
     post:
       summary: Log streak activity
@@ -1677,6 +1803,38 @@ components:
       description: |
         JWT token obtained from /auth/login endpoint.
         Include in Authorization header as: "Bearer {token}"
+
+  schemas:
+    College:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Massachusetts Institute of Technology"
+        code:
+          type: string
+          nullable: true
+          example: "MIT"
+        state_id:
+          type: integer
+          nullable: true
+          example: 1
+        total_cas:
+          type: integer
+          example: 0
+        total_xp:
+          type: integer
+          example: 0
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
 
 # Common Headers
 # All protected routes require:

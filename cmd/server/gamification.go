@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/go-chi/chi/v5"
+	"github.com/rohit21755/gg_server.git/internal/store"
+	"gorm.io/gorm"
 	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/rohit21755/gg_server.git/internal/store"
-	"gorm.io/gorm"
 )
 
 // Get XP Transactions
@@ -343,43 +342,190 @@ func getStreakHandler(db *gorm.DB) http.HandlerFunc {
 
 		streakType := r.URL.Query().Get("type")
 		if streakType == "" {
-			streakType = "daily_login"
+			streakType = "daily_engagement" // Changed default to track all engagement
 		}
 
-		streak, err := store.GetUserStreak(db, user.ID, streakType)
-		if err != nil {
-			// Return empty streak if not found
-			response := map[string]interface{}{
-				"streak_type":    streakType,
-				"current_streak": 0,
-				"longest_streak": 0,
-				"total_days":     0,
-				"last_activity":  nil,
-			}
-			jsonResponse(w, http.StatusOK, response)
-			return
-		}
+		// Get all engagement dates from various sources
+		engagementDates := getAllEngagementDates(db, user.ID)
+
+		// Calculate streak from engagement dates
+		currentStreak, longestStreak, totalDays, lastActivity := calculateStreakFromDates(engagementDates)
 
 		// Get recent streak logs
 		var logs []store.StreakLog
-		db.Where("user_id = ? AND streak_type = ?", user.ID, streakType).
+		db.Where("user_id = ?", user.ID).
 			Order("activity_date DESC").
 			Limit(30).
 			Find(&logs)
 
+		// Format dates for calendar component (YYYY-MM-DD format)
+		calendarDates := make([]string, 0, len(engagementDates))
+		for _, date := range engagementDates {
+			calendarDates = append(calendarDates, date.Format("2006-01-02"))
+		}
+
 		response := map[string]interface{}{
-			"streak_type":    streak.StreakType,
-			"current_streak": streak.CurrentStreak,
-			"longest_streak": streak.LongestStreak,
-			"total_days":     streak.TotalDays,
-			"last_activity":  streak.LastActivityDate,
-			"recent_logs":    logs,
+			"streak_type":      "daily_engagement",
+			"current_streak":   currentStreak,
+			"longest_streak":   longestStreak,
+			"total_days":       totalDays,
+			"last_activity":    lastActivity,
+			"calendar_dates":   calendarDates,   // Dates for calendar component
+			"engagement_dates": engagementDates, // Full date objects
+			"recent_logs":      logs,
 		}
 
 		if err := jsonResponse(w, http.StatusOK, response); err != nil {
 			internalServerError(w, r, err)
 		}
 	}
+}
+
+// getAllEngagementDates aggregates all engagement dates from various sources
+func getAllEngagementDates(db *gorm.DB, userID uint) []time.Time {
+	userIDInt := int(userID)
+	dateMap := make(map[string]time.Time)
+
+	// 1. Get dates from submissions (any submission activity)
+	var submissions []store.Submission
+	db.Where("user_id = ?", userIDInt).
+		Select("submitted_at").
+		Find(&submissions)
+	for _, sub := range submissions {
+		if !sub.SubmittedAt.IsZero() {
+			date := sub.SubmittedAt.Truncate(24 * time.Hour)
+			dateStr := date.Format("2006-01-02")
+			dateMap[dateStr] = date
+		}
+	}
+
+	// 2. Get dates from XP transactions (any engagement that earned XP)
+	var xpTransactions []store.XPTransaction
+	db.Where("user_id = ? AND transaction_type IN (?, ?, ?, ?, ?)",
+		userIDInt, "task_completion", "referral", "spin_wheel", "mystery_box", "quiz").
+		Select("created_at").
+		Find(&xpTransactions)
+	for _, tx := range xpTransactions {
+		if !tx.CreatedAt.IsZero() {
+			date := tx.CreatedAt.Truncate(24 * time.Hour)
+			dateStr := date.Format("2006-01-02")
+			dateMap[dateStr] = date
+		}
+	}
+
+	// 3. Get dates from task assignments (when tasks were accepted)
+	var taskAssignments []store.TaskAssignment
+	db.Where("assignee_id = ? AND assignee_type = ? AND status IN (?, ?)",
+		userIDInt, "user", "accepted", "completed").
+		Select("assigned_at").
+		Find(&taskAssignments)
+	for _, ta := range taskAssignments {
+		if !ta.AssignedAt.IsZero() {
+			date := ta.AssignedAt.Truncate(24 * time.Hour)
+			dateStr := date.Format("2006-01-02")
+			dateMap[dateStr] = date
+		}
+	}
+
+	// 4. Get dates from user spins
+	var userSpins []store.UserSpin
+	db.Where("user_id = ?", userIDInt).
+		Select("spun_at").
+		Find(&userSpins)
+	for _, spin := range userSpins {
+		if !spin.SpunAt.IsZero() {
+			date := spin.SpunAt.Truncate(24 * time.Hour)
+			dateStr := date.Format("2006-01-02")
+			dateMap[dateStr] = date
+		}
+	}
+
+	// 5. Get dates from streak logs (explicitly logged activities)
+	var streakLogs []store.StreakLog
+	db.Where("user_id = ?", userIDInt).
+		Select("activity_date").
+		Find(&streakLogs)
+	for _, log := range streakLogs {
+		if !log.ActivityDate.IsZero() {
+			date := log.ActivityDate.Truncate(24 * time.Hour)
+			dateStr := date.Format("2006-01-02")
+			dateMap[dateStr] = date
+		}
+	}
+
+	// Convert map to slice and sort in descending order
+	uniqueDates := make([]time.Time, 0, len(dateMap))
+	for _, date := range dateMap {
+		uniqueDates = append(uniqueDates, date)
+	}
+
+	// Sort dates in descending order (most recent first)
+	for i := 0; i < len(uniqueDates)-1; i++ {
+		for j := i + 1; j < len(uniqueDates); j++ {
+			if uniqueDates[i].Before(uniqueDates[j]) {
+				uniqueDates[i], uniqueDates[j] = uniqueDates[j], uniqueDates[i]
+			}
+		}
+	}
+
+	return uniqueDates
+}
+
+// calculateStreakFromDates calculates streak statistics from engagement dates
+func calculateStreakFromDates(dates []time.Time) (currentStreak, longestStreak, totalDays int, lastActivity *time.Time) {
+	if len(dates) == 0 {
+		return 0, 0, 0, nil
+	}
+
+	totalDays = len(dates)
+	lastActivity = &dates[0] // Most recent date (first in sorted descending order)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	currentStreak = 0
+	longestStreak = 0
+	tempStreak := 0
+
+	// Calculate current streak (consecutive days from today backwards)
+	expectedDate := today
+	for _, date := range dates {
+		date = date.Truncate(24 * time.Hour)
+		if date.Equal(expectedDate) {
+			if currentStreak == 0 {
+				currentStreak = 1
+			} else {
+				currentStreak++
+			}
+			expectedDate = expectedDate.Add(-24 * time.Hour)
+		} else if date.Before(expectedDate) {
+			// Gap found, streak is broken
+			break
+		}
+	}
+
+	// Calculate longest streak
+	prevDate := dates[0]
+	tempStreak = 1
+	longestStreak = 1
+
+	for i := 1; i < len(dates); i++ {
+		currentDate := dates[i].Truncate(24 * time.Hour)
+		prevDate = prevDate.Truncate(24 * time.Hour)
+		daysDiff := int(prevDate.Sub(currentDate).Hours() / 24)
+
+		if daysDiff == 1 {
+			// Consecutive day
+			tempStreak++
+			if tempStreak > longestStreak {
+				longestStreak = tempStreak
+			}
+		} else {
+			// Gap found, reset streak
+			tempStreak = 1
+		}
+		prevDate = currentDate
+	}
+
+	return currentStreak, longestStreak, totalDays, lastActivity
 }
 
 // Log Daily Activity
