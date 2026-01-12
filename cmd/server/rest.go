@@ -11,11 +11,16 @@ import (
 func setupREST(r chi.Router, db *gorm.DB) {
 	log.Println("Setting up REST API")
 
+	if db == nil {
+		log.Fatal("Database connection is nil, cannot setup REST API")
+	}
+
 	// CORS middleware
 
 	r.Route("/api/v1", func(r chi.Router) {
 		// Public routes
 		r.Get("/health", healthHandler)
+		log.Println("Health endpoint registered at /api/v1/health")
 
 		// Auth routes
 		r.Route("/auth", func(r chi.Router) {

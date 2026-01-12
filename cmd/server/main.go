@@ -16,9 +16,16 @@ import (
 
 func main() {
 	env.Load()
+	log.Println("Loading environment variables...")
+	
 	database := db.Connect()
+	if database == nil {
+		log.Fatal("Failed to connect to database")
+	}
+	log.Println("Database connected successfully")
 
 	router := chi.NewRouter()
+	log.Println("Router created")
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
